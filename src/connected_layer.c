@@ -49,8 +49,14 @@ matrix forward_connected_layer(layer l, matrix x)
     *l.x = copy_matrix(x);
 
     // TODO: 3.1 - run the network forward
-    matrix y = make_matrix(x.rows, l.w.cols); // Going to want to change this!
-
+    matrix w = l.w;
+    matrix b = l.b;
+    assert(x.rows == w.cols);
+    assert(x.cols == w.rows);
+    matrix y = matmul(x, w);
+    assert(y.cols == b.cols);
+    assert(y.rows == b.rows);
+    y = forward_bias(y, b);
 
     return y;
 }
@@ -71,10 +77,19 @@ matrix backward_connected_layer(layer l, matrix dy)
     // updates for our weights, which are stored in l.dw
 
     // Calculate dL/dx and return it
-    matrix dx = copy_matrix(x); // Change this
+    matrix dydb = random_matrix(x.rows, x.cols, 1.0)
+    matrix dydw = copy_matrix(x);
 
+    assert(dydw.cols == l.dw.cols);
+    assert(dydw.rows == l.dw.rows);   
+    axpy_matrix(1.0, dydw, l.dw);
+    assert(dydb.cols == l.db.cols);
+    assert(dydb.rows == l.db.rows);
+    axpy_matrix(1.0, dydb, l.db);
 
-    return dx;
+    matrix dydx = l.w;
+    matrix dLdx = mathamm(dx, dy)
+    return dLdx;
 }
 
 // Update weights and biases of connected layer
