@@ -20,9 +20,42 @@ matrix forward_activation_layer(layer l, matrix x)
 
     // TODO: 2.1
     // apply the activation function to matrix y
-    // logistic(x) = 1/(1+e^(-x))
-    // relu(x)     = x if x > 0 else 0
-    // lrelu(x)    = x if x > 0 else .01 * x
+    int i, j;
+    for (i = 0; i < y.rows; ++i){
+        float row_sum = 0.0;
+        for (j = 0; j < y.cols; ++j){
+            if (a == LOGISTIC) {        // logistic(x) = 1/(1+e^(-x))
+                float grid = 1 + exp(-y.data[i*y.cols+j]);
+                grid = 1.0 / grid;
+                y.data[i*y.cols+j] = grid;
+            } else if (a == RELU){      // relu(x)     = x if x > 0 else 0
+                float grid = y.data[i*y.cols+j];
+                y.data[i*y.cols+j] = grid;
+                if (grid < 0) {
+                    y.data[i*y.cols+j] = 0.0;
+                }
+            } else if (a == LRELU) {    // lrelu(x)    = x if x > 0 else .01 * x
+                float grid = y.data[i*y.cols+j];
+                y.data[i*y.cols+j] = grid;
+                if (grid < 0) {
+                    y.data[i*y.cols+j] = 0.01 * grid;
+                }
+            } else if (a == SOFTMAX){   // softmax(x)  = e^{x_i} / sum(e^{x_j}) for all x_j in the same row 
+                float grid = y.data[i*y.cols+j];
+                grid = exp(grid);
+                row_sum += grid;
+                y.data[i*y.cols+j] = grid;
+            }
+        }
+        if (a == SOFTMAX){
+            for (j = 0; j < y.cols; ++j){
+                float grid = y.data[i*y.cols+j];
+                grid = grid / row_sum;
+                y.data[i*y.cols+j] = grid;
+            }
+        }
+    }
+
     // softmax(x)  = e^{x_i} / sum(e^{x_j}) for all x_j in the same row 
 
     return y;
@@ -47,6 +80,30 @@ matrix backward_activation_layer(layer l, matrix dy)
     // d/dx relu(x)     = 1 if x > 0 else 0
     // d/dx lrelu(x)    = 1 if x > 0 else 0.01
     // d/dx softmax(x)  = 1
+    int i, j;
+    for (i = 0; i < x.rows; ++i){
+        for (j = 0; j < x.cols; ++j){
+            if (a == LOGISTIC) {        // d/dx logistic(x) = logistic(x) * (1 - logistic(x))
+                float grid = 1 + exp(-x.data[i*x.cols+j]);
+                grid = 1.0 / grid;
+                dx.data[i*x.cols+j] *= grid * (1 - grid);
+            } else if (a == RELU){      // d/dx relu(x)     = 1 if x > 0 else 0
+                float grid = x.data[i*x.cols+j];
+                dx.data[i*x.cols+j] *= 1.0;
+                if (grid <= 0) {
+                    dx.data[i*dx.cols+j] *= 0.0;
+                }
+            } else if (a == LRELU) {    // d/dx lrelu(x)    = 1 if x > 0 else 0.01
+                float grid = x.data[i*x.cols+j];
+                dx.data[i*x.cols+j] *= 1.0;
+                if (grid <= 0) {
+                    dx.data[i*x.cols+j] *= 0.01;
+                }
+            } else if (a == SOFTMAX){   // d/dx softmax(x)  = 1
+                dx.data[i*x.cols+j] *= 1.0;
+            }
+        }
+    }
 
     return dx;
 }
