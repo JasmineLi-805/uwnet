@@ -51,11 +51,9 @@ matrix forward_connected_layer(layer l, matrix x)
     // TODO: 3.1 - run the network forward
     matrix w = l.w;
     matrix b = l.b;
-    assert(x.rows == w.cols);
-    assert(x.cols == w.rows);
+    // printf("x.rows: %d\tx.cols: %d\tw.rows: %d\tw.cols: %d\n", x.rows, x.cols, w.rows, w.cols);
+
     matrix y = matmul(x, w);
-    assert(y.cols == b.cols);
-    assert(y.rows == b.rows);
     y = forward_bias(y, b);
 
     return y;
@@ -77,18 +75,28 @@ matrix backward_connected_layer(layer l, matrix dy)
     // updates for our weights, which are stored in l.dw
 
     // Calculate dL/dx and return it
-    matrix dydb = random_matrix(x.rows, x.cols, 1.0)
+    matrix dLdb = backward_bias(dy);
     matrix dydw = copy_matrix(x);
 
-    assert(dydw.cols == l.dw.cols);
-    assert(dydw.rows == l.dw.rows);   
-    axpy_matrix(1.0, dydw, l.dw);
-    assert(dydb.cols == l.db.cols);
-    assert(dydb.rows == l.db.rows);
-    axpy_matrix(1.0, dydb, l.db);
+    // printf("w.rows: %d\tw.cols: %d\n", l.w.rows, l.w.cols);
+    // printf("dy.rows: %d\tdy.cols: %d\tdydw.rows: %d\tdydw.cols: %d", dy.rows, dy.cols, dydw.rows, dydw.cols);
+    dydw = transpose_matrix(dydw);
+    matrix dLdw = matmul(dydw, dy);
 
+    assert(dLdw.cols == l.dw.cols);
+    assert(dLdw.rows == l.dw.rows);   
+    axpy_matrix(1.0, dLdw, l.dw);
+    assert(dLdb.cols == l.db.cols);
+    assert(dLdb.rows == l.db.rows);
+    axpy_matrix(1.0, dLdb, l.db);
+
+    
     matrix dydx = l.w;
-    matrix dLdx = mathamm(dx, dy)
+    // printf("x.rows: %d\tx.cols: %d\n", x.rows, x.cols);
+    // printf("dy.rows: %d\tdy.cols: %d\tdydx.rows: %d\tdydx.cols: %d", dy.rows, dy.cols, dydx.rows, dydx.cols);
+    // print_matrix(dy);
+    dydx = transpose_matrix(dydx);
+    matrix dLdx = matmul(dy, dydx);
     return dLdx;
 }
 
@@ -107,7 +115,16 @@ void update_connected_layer(layer l, float rate, float momentum, float decay)
     // lastly, l.dw is the negative update (-update) but for the next iteration
     // we want it to be (-momentum * update) so we just need to scale it a little
 
+    // l.dw = dL/dw - momentum*prev
+    axpy_matrix(decay, l.w, l.dw);  // l.dw = dL/dw - momentum*prev + decay * l.w
+    axpy_matrix(-1.0*rate, l.dw, l.w);  // l.w = l.w - rate*l.dw
+    scal_matrix(momentum, l.dw);   // l.dw = -prev * momentum = l.dw * momentum
+
     // Do the same for biases as well but no need to use weight decay on biases
+    // l.db = dL/db - momentum*prev_db
+    axpy_matrix(-1.0*rate, l.db, l.b);  // l.b = l.b - rate*l.db
+    scal_matrix(momentum, l.db);   // l.db = -prev * momentum
+
 }
 
 layer make_connected_layer(int inputs, int outputs)

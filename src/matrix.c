@@ -118,6 +118,22 @@ matrix matmul(matrix a, matrix b)
     return c;
 }
 
+// Perform the hammard product of two matrices (element-wise multiplication)
+// matrix a, b: operands
+// returns: result of hammard product
+matrix mathamm(matrix a, matrix b){
+    assert(a.cols == b.cols);
+    assert(a.rows == b.rows);
+    matrix result = make_matrix(a.rows, a.cols);
+    int i, j;
+    for (i = 0; i < a.rows; ++i){
+        for (j = 0; j < a.cols; ++j){
+            result.data[i*a.cols + j] = a.data[i*a.cols+j] * b.data[i*a.cols+j];
+        }
+    }
+    return result;
+}
+
 // In-place, element-wise scaling of matrix
 // float s: scaling factor
 // matrix m: matrix to be scaled
