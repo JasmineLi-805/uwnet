@@ -1,6 +1,7 @@
 from uwnet import *
 
 mnist = 1
+# mnist = 0 # for CIFAR
 
 inputs = 784 if mnist else 3072
 
@@ -29,8 +30,8 @@ print
 print("making model...")
 batch = 128
 iters = 5000
-rate = .01
-momentum = .9
+rate = .005
+momentum = 0.99
 decay = .0
 
 m = softmax_model()
@@ -40,5 +41,5 @@ print("done")
 print
 
 print("evaluating model...")
-print("training accuracy: %f", accuracy_net(m, train))
-print("test accuracy:     %f", accuracy_net(m, test))
+print("training accuracy: %f", accuracy_net(m, train))  # MNIST: 92.82%
+print("test accuracy:     %f", accuracy_net(m, test))   # MNIST: 92.38%
