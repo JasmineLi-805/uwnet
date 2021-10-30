@@ -54,9 +54,10 @@ matrix forward_connected_layer(layer l, matrix x)
     // printf("x.rows: %d\tx.cols: %d\tw.rows: %d\tw.cols: %d\n", x.rows, x.cols, w.rows, w.cols);
 
     matrix y = matmul(x, w);
-    y = forward_bias(y, b);
+    matrix result = forward_bias(y, b);
+    free_matrix(y);
 
-    return y;
+    return result;
 }
 
 // Run a connected layer backward
@@ -80,23 +81,32 @@ matrix backward_connected_layer(layer l, matrix dy)
 
     // printf("w.rows: %d\tw.cols: %d\n", l.w.rows, l.w.cols);
     // printf("dy.rows: %d\tdy.cols: %d\tdydw.rows: %d\tdydw.cols: %d", dy.rows, dy.cols, dydw.rows, dydw.cols);
+    matrix ori_dydw = dydw;
     dydw = transpose_matrix(dydw);
+    free_matrix(ori_dydw);
+
     matrix dLdw = matmul(dydw, dy);
+    free_matrix(dydw);
 
     assert(dLdw.cols == l.dw.cols);
     assert(dLdw.rows == l.dw.rows);   
     axpy_matrix(1.0, dLdw, l.dw);
+    free_matrix(dLdw);
+
     assert(dLdb.cols == l.db.cols);
     assert(dLdb.rows == l.db.rows);
     axpy_matrix(1.0, dLdb, l.db);
+    free_matrix(dLdb);
 
     
     matrix dydx = l.w;
     // printf("x.rows: %d\tx.cols: %d\n", x.rows, x.cols);
     // printf("dy.rows: %d\tdy.cols: %d\tdydx.rows: %d\tdydx.cols: %d", dy.rows, dy.cols, dydx.rows, dydx.cols);
     // print_matrix(dy);
-    dydx = transpose_matrix(dydx);
-    matrix dLdx = matmul(dy, dydx);
+    matrix tdydx = transpose_matrix(dydx);
+    matrix dLdx = matmul(dy, tdydx);
+
+    free_matrix(tdydx);
     return dLdx;
 }
 

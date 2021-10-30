@@ -28,6 +28,7 @@ image make_empty_image(int w, int h, int c)
 
 image make_image(int w, int h, int c)
 {
+    // printf("malloc img %d\n", w*h*c);
     image out = make_empty_image(w,h,c);
     out.data = calloc(h*w*c, sizeof(float));
     return out;
@@ -118,6 +119,7 @@ image load_image(char *filename)
 
 void free_image(image im)
 {
+    // printf("\t\tfree img %d\n", im.w*im.h*im.c);
     free(im.data);
 }
 

@@ -12,6 +12,7 @@
 // returns: matrix of specified size, filled with zeros
 matrix make_matrix(int rows, int cols)
 {
+    // printf("malloc mat %d\n", rows*cols);
     matrix m;
     m.rows = rows;
     m.cols = cols;
@@ -41,6 +42,7 @@ matrix random_matrix(int rows, int cols, float s)
 void free_matrix(matrix m)
 {
     if (!m.shallow && m.data) {
+        // printf("\t\tfree mat %d\n", m.rows*m.cols);
         free(m.data);
     }
 }

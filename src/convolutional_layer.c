@@ -48,19 +48,48 @@ matrix backward_convolutional_bias(matrix dy, int n)
 // returns: column matrix
 matrix im2col(image im, int size, int stride)
 {
-    int i, j, k;
     int outw = (im.w-1)/stride + 1;
     int outh = (im.h-1)/stride + 1;
     int rows = im.c*size*size;
     int cols = outw * outh;
-    matrix col = make_matrix(rows, cols);
+    matrix col = make_matrix(cols, rows); // make a matrix that is the transpose of the size we want
 
-    // TODO: 5.1
+    // 5.1
     // Fill in the column matrix with patches from the image
+    int pad_front = (size - 1) / 2;
+    int chan, i, j;
+    image padded_img = make_image(im.w + size - 1, im.h + size - 1, im.c);
+    for (chan = 0; chan < im.c; ++chan){
+        for (i = 0; i < im.h; ++i){
+            for (j = 0; j < im.w; ++j){
+                float pix = get_pixel(im, j, i, chan);
+                set_pixel(padded_img, j+pad_front, i+pad_front, chan, pix);
+            }
+        }
+    }
 
+    int n = 0;
+    int c;
+    for (i = 0; i < im.h; i+=stride) {
+        for (j = 0; j < im.w; j+=stride) {
+            for (c = 0; c < im.c; ++c){
+                int ii, jj;
+                for (ii = 0; ii < size; ++ii){
+                    for (jj = 0; jj < size; ++jj) {
+                        assert(n < rows * cols);
+                        col.data[n] = get_pixel(padded_img, j+jj, i+ii, c);
+                        n += 1;
+                    }
+                }
+            }
+        }
+    }
 
+    matrix res_col = transpose_matrix(col);
+    free_matrix(col);
+    free_image(padded_img);
 
-    return col;
+    return res_col;
 }
 
 // The reverse of im2col, add elements back into image
@@ -73,12 +102,52 @@ image col2im(int width, int height, int channels, matrix col, int size, int stri
     int i, j, k;
 
     image im = make_image(width, height, channels);
-    int outw = (im.w-1)/stride + 1;
-    int rows = im.c*size*size;
+    // int outw = (im.w-1)/stride + 1;
+    // int rows = im.c*size*size;
 
-    // TODO: 5.2
+    // 5.2
     // Add values into image im from the column matrix
+    int pad_front = (size - 1) / 2;
+    matrix tcol = transpose_matrix(col);
+    image padded_img = make_image(width + size - 1, height + size - 1, channels);
     
+    // printf("\n%d values in columns\n", col.rows * col.cols);
+    // printf("padded_img: %d-%d-%d\n", padded_img.w, padded_img.h, padded_img.c);
+    // printf("orignial im: %d-%d-%d\n", im.w, im.h, im.c);
+    int n = 0;
+    for (i = 0; i < padded_img.h - (size - 1); i += stride) {
+        for (j = 0; j < padded_img.w - (size - 1); j += stride){
+            for (k = 0; k < padded_img.c; k += 1) {
+                int ii, jj;
+                for (ii = 0; ii < size; ++ii){
+                    for (jj = 0; jj < size; ++jj) {
+                        assert(n < col.rows * col.cols);
+                        float pix = tcol.data[n];
+
+                        assert(j+jj < padded_img.w && j+jj >= 0);
+                        assert(i+ii < padded_img.h && i+ii >= 0);
+                        assert(k < padded_img.c);
+                        float p = get_pixel(padded_img, j+jj, i+ii, k);
+
+                        set_pixel(padded_img, j+jj, i+ii, k, pix + p);
+                        n += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    for (i = 0; i < im.h; ++i){
+        for (j = 0; j < im.w; ++j) {
+            for (k = 0; k < im.c; ++k){
+                float pix = get_pixel(padded_img, j + pad_front, i + pad_front, k);
+                set_pixel(im, j, i, k, pix);
+            }
+        }
+    }
+
+    free_matrix(tcol);
+    free_image(padded_img);
 
 
     return im;
@@ -173,7 +242,24 @@ matrix backward_convolutional_layer(layer l, matrix dy)
 // float decay: l2 regularization term
 void update_convolutional_layer(layer l, float rate, float momentum, float decay)
 {
+    // printf("updating conv layer\n");
     // TODO: 5.3
+    // Apply our updates using our SGD update rule
+    // assume  l.dw = dL/dw - momentum * update_prev
+    // we want l.dw = dL/dw - momentum * update_prev + decay * w
+    // then we update l.w = l.w - rate * l.dw
+    // lastly, l.dw is the negative update (-update) but for the next iteration
+    // we want it to be (-momentum * update) so we just need to scale it a little
+
+    // l.dw = dL/dw - momentum*prev
+    axpy_matrix(decay, l.w, l.dw);  // l.dw = dL/dw - momentum*prev + decay * l.w
+    axpy_matrix(-1.0*rate, l.dw, l.w);  // l.w = l.w - rate*l.dw
+    scal_matrix(momentum, l.dw);   // l.dw = -prev * momentum = l.dw * momentum
+
+    // Do the same for biases as well but no need to use weight decay on biases
+    // l.db = dL/db - momentum*prev_db
+    axpy_matrix(-1.0*rate, l.db, l.b);  // l.b = l.b - rate*l.db
+    scal_matrix(momentum, l.db);   // l.db = -prev * momentum
 }
 
 // Make a new convolutional layer
