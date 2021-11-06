@@ -25,6 +25,7 @@ matrix forward_maxpool_layer(layer l, matrix in)
     int x;
     int pad_front = (l.size - 1) / 2;
     for(x = 0; x < in.rows; ++x){
+        assert(in.cols == l.width*l.height*l.channels);
         image sample = float_to_image(in.data + x*in.cols, l.width, l.height, l.channels);
         int i, j, k;
         int n = 0;
@@ -44,7 +45,7 @@ matrix forward_maxpool_layer(layer l, matrix in)
                         }
                     }
                     assert(max > -INFINITY);
-                    out.data[outw*outh*k + n] = max;
+                    out.data[x*out.cols + outw*outh*k + n] = max;
                 }
                 n += 1;
             }
@@ -104,7 +105,7 @@ matrix backward_maxpool_layer(layer l, matrix dy)
                             }
                         }
                     }
-                    dx.data[l.width*l.height*k + max_h*l.width + max_w] += dy.data[k * outh * outw + n];
+                    dx.data[x*dx.cols + l.width*l.height*k + max_h*l.width + max_w] += dy.data[x*dy.cols + k * outh * outw + n];
                     // dx.data[l.width*l.height*k + max_h*l.width + max_w] = 1;
                 }
                 n += 1;

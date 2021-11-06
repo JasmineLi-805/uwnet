@@ -117,6 +117,7 @@ matrix matmul(matrix a, matrix b)
             c.data[i*c.cols + j] = grid;
         }
     }
+    free_matrix(bt);
     return c;
 }
 

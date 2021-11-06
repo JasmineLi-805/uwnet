@@ -252,7 +252,10 @@ void update_convolutional_layer(layer l, float rate, float momentum, float decay
     // we want it to be (-momentum * update) so we just need to scale it a little
 
     // l.dw = dL/dw - momentum*prev
+    // printf("l.dw dim = %d-%d\n", l.dw.rows, l.dw.cols);
+    // printf("l.w dim = %d-%d\n", l.w.rows, l.w.cols);
     axpy_matrix(decay, l.w, l.dw);  // l.dw = dL/dw - momentum*prev + decay * l.w
+    // print_matrix(l.dw);
     axpy_matrix(-1.0*rate, l.dw, l.w);  // l.w = l.w - rate*l.dw
     scal_matrix(momentum, l.dw);   // l.dw = -prev * momentum = l.dw * momentum
 
