@@ -9,6 +9,7 @@
 #include "image.h"
 #include "test.h"
 #include "args.h"
+
 // Forward declare for tests
 matrix mean(matrix x, int groups);
 matrix variance(matrix x, matrix m, int groups);
@@ -260,6 +261,28 @@ void test_col2im()
     free_matrix(col2mat2);
     free_matrix(truth_col2mat2);
     free_image(im);
+}
+
+void test_convolutional_layer()
+{
+    layer l = make_convolutional_layer(64, 32, 16, 8, 3, 1);
+    matrix x = load_matrix("data/test/conv_x.matrix");
+    matrix w = load_matrix("data/test/conv_w.matrix");
+    matrix b = load_matrix("data/test/conv_b.matrix");
+    matrix truth_y = load_matrix("data/test/conv_y.matrix");
+    free_matrix(l.w);
+    free_matrix(l.b);
+    l.w = w;
+    l.b = b;
+
+    matrix y = l.forward(l, x);
+ 
+    TEST(same_matrix(truth_y, y));
+    
+    free_layer(l);
+    free_matrix(x);
+    free_matrix(truth_y);
+    free_matrix(y);
 }
 
 
@@ -528,6 +551,20 @@ void make_matrix_test()
     col2mat2.data = col2im_res2.data;
     save_matrix(col2mat2, "data/test/col2mat2.matrix");
 
+    // Convolutional Layer Tests
+    {
+        layer l = make_convolutional_layer(64, 32, 16, 8, 3, 1);
+        matrix x = random_matrix(10, 64*32*16, 1);
+        save_matrix(x,   "data/test/conv_x.matrix");
+        save_matrix(l.w, "data/test/conv_w.matrix");
+        save_matrix(l.b, "data/test/conv_b.matrix");
+
+        matrix y = l.forward(l, x);
+        save_matrix(y, "data/test/conv_y.matrix");
+
+        free_layer(l);
+        free_matrix(y);
+    }
 
 
     // Batch norm test
@@ -587,20 +624,39 @@ void test_matrix_speed()
     printf("Transpose elapsed %lf sec\n", what_time_is_it_now() - start);
 }
 
-void run_tests()
+void run_hw0_tests()
 {
-    //make_matrix_test();
     test_copy_matrix();
     test_axpy_matrix();
     test_transpose_matrix();
     test_matmul();
     test_activation_layer();
     test_connected_layer();
+}
+
+void run_hw1_tests()
+{
     test_im2col();
     test_col2im();
+    test_convolutional_layer();
     test_maxpool_layer();
-    test_batchnorm_layer();
+}
 
-    printf("%d tests, %d passed, %d failed\n", tests_total, tests_total-tests_fail, tests_fail);
+void run_hw2_tests()
+{
+    test_batchnorm_layer();
+}
+
+void run_tests()
+{
+    run_hw0_tests();
+    run_hw1_tests();
+    run_hw2_tests();
+}
+
+void make_tests()
+{
+    // Don't run this function, it generates the ground truth matrices to test code against
+    make_matrix_test();
 }
 
