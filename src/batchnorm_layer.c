@@ -3,6 +3,8 @@
 #include <assert.h>
 #include "uwnet.h"
 
+float EPSILON = 0.00001f;
+
 // Take mean of matrix x over rows and spatial dimension
 // matrix x: matrix with data
 // int groups: number of distinct means to take, usually equal to # outputs
@@ -29,7 +31,24 @@ matrix mean(matrix x, int groups)
 matrix variance(matrix x, matrix m, int groups)
 {
     matrix v = make_matrix(1, groups);
-    // TODO: 7.1 - Calculate variance
+    
+    // 7.1 - Calculate variance
+    assert(x.cols % groups == 0);
+    assert(v.cols == m.cols);
+    assert(v.rows == m.rows);
+    int n = x.cols / groups;
+    int i, j;
+    for(i = 0; i < x.rows; ++i){
+        for(j = 0; j < x.cols; ++j){
+            float res = x.data[i*x.cols + j] - m.data[j/n];
+            res = pow(res, 2.0);
+            v.data[j/n] += res;
+        }
+    }
+    for(i = 0; i < v.cols; ++i){
+        v.data[i] = v.data[i] / x.rows / n;
+    }
+
     return v;
 }
 
@@ -38,7 +57,18 @@ matrix variance(matrix x, matrix m, int groups)
 matrix normalize(matrix x, matrix m, matrix v, int groups)
 {
     matrix norm = make_matrix(x.rows, x.cols);
-    // TODO: 7.2 - Normalize x
+    // 7.2 - Normalize x
+    int n = x.cols / groups;
+    int i, j;
+    for(i = 0; i < x.rows; ++i){
+        for(j = 0; j < x.cols; ++j){
+            float res = x.data[i*x.cols + j] - m.data[j/n];
+            float std = sqrt(v.data[j/n]);
+            res = res / (std + EPSILON);
+            norm.data[i*x.cols + j] = res;
+        }
+    }
+
     return norm;
 }
 
@@ -78,7 +108,15 @@ matrix delta_mean(matrix d, matrix v)
 {
     int groups = v.cols;
     matrix dm = make_matrix(1, groups);
-    // TODO 7.3 - Calculate dL/dm
+    // 7.3 - Calculate dL/dm
+    int n = d.cols / groups;
+    assert (d.cols % groups == 0);
+    int i, j;
+    for(i = 0; i < d.rows; ++i){
+        for(j = 0; j < d.cols; ++j){
+            dm.data[j/n] -= d.data[i*d.cols+j] / (sqrt(v.data[j/n] + EPSILON));
+        }
+    }
     return dm;
 }
 
@@ -87,14 +125,52 @@ matrix delta_variance(matrix d, matrix x, matrix m, matrix v)
 {
     int groups = m.cols;
     matrix dv = make_matrix(1, groups);
-    // TODO 7.4 - Calculate dL/dv
+    // 7.4 - Calculate dL/dv
+    int n = d.cols / groups;
+    assert (d.cols % groups == 0);
+    int i, j;
+    for(i = 0; i < d.rows; ++i){
+        for(j = 0; j < d.cols; ++j){
+            float mu = m.data[j/n];
+            float var = v.data[j/n];
+            float xx = x.data[i*x.cols+j];
+            float dy = d.data[i*d.cols+j];
+
+            float res = -0.5;
+            res = res / pow(sqrt(var + EPSILON), 3.0);
+            res = res * (xx - mu);
+            res = res * dy;
+            dv.data[j/n] += res;
+        }
+    }
     return dv;
 }
 
 matrix delta_batch_norm(matrix d, matrix dm, matrix dv, matrix m, matrix v, matrix x)
 {
     matrix dx = make_matrix(d.rows, d.cols);
-    // TODO 7.5 - Calculate dL/dx
+    // 7.5 - Calculate dL/dx
+    int groups = m.cols;
+    int n = d.cols / groups;
+    int batch_size = d.rows;
+    assert(d.cols % groups == 0);
+    assert(d.rows == x.rows);
+    assert(d.cols == x.cols);
+    int i, j;
+    for(i = 0; i < dx.rows; ++i){
+        for(j = 0; j < dx.cols; ++j){
+            float dLdy = d.data[i*d.cols+j];
+            float dLdv = dv.data[j/n];
+            float dLdm = dm.data[j/n];
+
+            float var = v.data[j/n];
+            float mu = m.data[j/n];
+            float xx = x.data[i*x.cols+j];
+            
+            float res = dLdy / sqrt(var + EPSILON) + dLdv * 2 * (xx - mu) / batch_size / n + dLdm / batch_size / n;
+            dx.data[i*dx.cols+j] = res;
+        }
+    }
     return dx;
 }
 
